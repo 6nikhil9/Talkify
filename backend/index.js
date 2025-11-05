@@ -1,8 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const mongooseConnect = require("./config/mongooseConnect");
-const authRouter = require("./routes/Auth.Routes");
-const translationRouter = require("./routes/translation.routes");
+const authRouter = require("./routes/AuthRoutes");
+const translationRouter = require("./routes/translationroutes");
 
 require("dotenv").config();
 
