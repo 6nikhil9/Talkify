@@ -12,7 +12,7 @@ const LoginSignup = () => {
   const handleAuth = async (e, type) => {
     e.preventDefault();
     try {
-      const url = `http://localhost:8080/auth/${type}`;
+      const url = `https://talkify-loau.onrender.com/auth/${type}`;
       const response = await axios.post(url, { username, password });
       if (type === "login") {
         localStorage.setItem("token", response.data.token); 

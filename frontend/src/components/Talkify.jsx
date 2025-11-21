@@ -29,7 +29,7 @@ const Talkify = () => {
     const fetchHistory = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:8080/api/history", {
+        const response = await axios.get("https://talkify-loau.onrender.com/api/history", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setHistory(response.data.history);
@@ -46,7 +46,7 @@ const Talkify = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        "http://localhost:8080/api/translate",
+        "https://talkify-loau.onrender.com/api/translate",
         { text: sourceText, sourceLang, targetLang },
         { headers: { Authorization: `Bearer ${token}` } }
       );
