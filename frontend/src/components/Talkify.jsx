@@ -5,7 +5,31 @@ import { HiSpeakerWave } from "react-icons/hi2";
 import { FaStopCircle, FaSun, FaMoon } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import LanguagesSelect from "./LanguagesSelect";
-import "../index.css";
+import {
+  Box,
+  Button,
+  Container,
+  Flex,
+  Heading,
+  HStack,
+  IconButton,
+  Select,
+  Text,
+  useColorMode,
+  useToast,
+  VStack,
+  List,
+  ListItem,
+  useTheme,
+} from "@chakra-ui/react";
+import { motion, AnimatePresence } from "framer-motion";
+import TextareaAutosize from "react-textarea-autosize";
+
+const MotionBox = motion(Box);
+const MotionButton = motion(Button);
+const MotionList = motion(List);
+const MotionListItem = motion(ListItem);
+const MotionIconButton = motion(IconButton);
 
 const Talkify = () => {
   const navigate = useNavigate();
@@ -15,9 +39,10 @@ const Talkify = () => {
   const [targetLang, setTargetLang] = useState("es");
   const [isLoading, setIsLoading] = useState(false);
   const [history, setHistory] = useState([]);
-  const [theme, setTheme] = useState(localStorage.getItem("theme") || "dark");
+  const { colorMode, toggleColorMode } = useColorMode();
+  const toast = useToast();
+  const theme = useTheme();
   const { transcript, listening, browserSupportsSpeechRecognition, resetTranscript } = useSpeechRecognition();
-
 
   useEffect(() => {
     if (transcript) {
@@ -54,6 +79,13 @@ const Talkify = () => {
       setHistory((prevHistory) => [...prevHistory, response.data]);
     } catch (error) {
       console.error("Translation error:", error);
+      toast({
+        title: "Translation Error",
+        description: "Failed to translate text. Please try again.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -64,7 +96,7 @@ const Talkify = () => {
       SpeechRecognition.stopListening();
       resetTranscript();
     } else {
-      SpeechRecognition.startListening();
+      SpeechRecognition.startListening({ continuous: true });
     }
   };
 
@@ -74,7 +106,13 @@ const Talkify = () => {
       utterance.lang = targetLang;
       speechSynthesis.speak(utterance);
     } else {
-      console.error("Speech synthesis not supported");
+      toast({
+        title: "Unsupported Feature",
+        description: "Speech synthesis is not supported in your browser.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
@@ -83,128 +121,201 @@ const Talkify = () => {
     navigate("/login");
   };
 
-  const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
+  const handleCopyToClipboard = () => {
+    navigator.clipboard.writeText(translatedText).then(() => {
+      toast({
+        title: "Copied to Clipboard",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+    }).catch((err) => {
+      console.error("Failed to copy text: ", err);
+      toast({
+        title: "Copy Error",
+        description: "Failed to copy text to clipboard.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    });
   };
 
-  useEffect(() => {
-    document.body.classList.toggle("dark", theme === "dark");
-    document.body.classList.toggle("light", theme === "light");
-  }, [theme]);
+  const textareaStyles = {
+    width: "100%",
+    padding: "1rem",
+    borderRadius: "0.375rem",
+    backgroundColor: colorMode === "dark" ? theme.colors.dark.surface : theme.colors.light.surface,
+    color: colorMode === "dark" ? theme.colors.dark.text : theme.colors.light.text,
+    borderColor: colorMode === "dark" ? theme.colors.dark.primary : theme.colors.light.primary,
+    borderWidth: "1px",
+    resize: "none",
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+    },
+  };
 
   if (!browserSupportsSpeechRecognition) {
-    return <span>Browser doesn't support speech recognition.</span>;
+    return (
+      <Container centerContent>
+        <Text>Browser doesn't support speech recognition.</Text>
+      </Container>
+    );
   }
 
   return (
-    <div className={`flex flex-col py-10 justify-center items-center min-h-screen bg-gradient-to-r ${theme === "dark" ? "from-gray-800 via-purple-800 to-gray-900" : "from-gray-100 to-gray-300"} text-white`}>
-      <div className="p-8 bg-gray-800/60 rounded-lg shadow-lg w-full max-w-2xl space-y-6 border-2 border-purple-500 backdrop-blur-lg">
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold glow-text">Talkify - Translate & Speak</h1>
-          <div className="flex items-center space-x-4">
-            <button onClick={toggleTheme} className="text-2xl text-purple-300">
-              {theme === "dark" ? <FaSun /> : <FaMoon />}
-            </button>
-            <button onClick={handleLogout} className="text-sm font-semibold text-purple-300 underline">
+    <Container maxW="container.lg" py={10}>
+      <VStack spacing={8} align="stretch">
+        <Flex justify="space-between" align="center">
+          <Heading as="h1" size="xl">
+            Talkify - Translate & Speak
+          </Heading>
+          <HStack>
+            <MotionIconButton
+              aria-label="Toggle theme"
+              icon={colorMode === "dark" ? <FaSun /> : <FaMoon />}
+              onClick={toggleColorMode}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            />
+            <MotionButton
+              onClick={handleLogout}
+              variant="link"
+              colorScheme="purple"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
               Logout
-            </button>
-          </div>
-        </div>
-        <textarea
-          placeholder="Enter text to translate"
-          value={sourceText}
-          onChange={(e) => setSourceText(e.target.value)}
-          className={`w-full p-4 rounded bg-gray-700 text-white resize-none h-32 placeholder-gray-300 ${theme === "dark" ? "border-gray-500" : "border-gray-300"}`}
-        />
-        <div className="flex flex-col md:flex-row justify-between space-y-4 space-x-4 md:space-y-0">
-          <select
-            onChange={(e) => setSourceLang(e.target.value)}
-            value={sourceLang}
-            className={`w-full md:w-1/2 p-3 bg-gray-700 text-white rounded border ${theme === "dark" ? "border-purple-500" : "border-gray-500"}`}
-          >
-            <LanguagesSelect />
-          </select>
-          <select
-            onChange={(e) => setTargetLang(e.target.value)}
-            value={targetLang}
-            className={`w-full md:w-1/2 p-3 bg-gray-700 text-white rounded border ${theme === "dark" ? "border-purple-500" : "border-gray-500"}`}
-          >
-            <LanguagesSelect />
-          </select>
-        </div>
-        <button
-          onClick={handleTranslate}
-          className={`w-full py-2 rounded font-semibold transition transform hover:scale-105 ${theme === "dark" ? "bg-purple-600 hover:bg-purple-500" : "bg-purple-700 hover:bg-purple-600"} text-white`}
-        >
-          {isLoading ? (
-            <span className="flex items-center justify-center">
-              <svg className="animate-spin h-5 w-5 mr-3 border-t-2 border-white rounded-full" viewBox="0 0 24 24"></svg>
-              Translating...
-            </span>
-          ) : (
-            "Translate"
+            </MotionButton>
+          </HStack>
+        </Flex>
+
+        <MotionBox variants={itemVariants}>
+          <VStack spacing={4}>
+            <TextareaAutosize
+              minRows={3}
+              maxRows={6}
+              placeholder="Enter text to translate"
+              value={sourceText}
+              onChange={(e) => setSourceText(e.target.value)}
+              style={textareaStyles}
+            />
+            <HStack w="full">
+              <Select value={sourceLang} onChange={(e) => setSourceLang(e.target.value)}>
+                <LanguagesSelect />
+              </Select>
+              <Select value={targetLang} onChange={(e) => setTargetLang(e.target.value)}>
+                <LanguagesSelect />
+              </Select>
+            </HStack>
+            <MotionButton
+              onClick={handleTranslate}
+              isLoading={isLoading}
+              loadingText="Translating..."
+              colorScheme="purple"
+              w="full"
+              size="lg"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Translate
+            </MotionButton>
+          </VStack>
+        </MotionBox>
+
+        <AnimatePresence>
+          {translatedText && (
+            <MotionBox
+              variants={itemVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+            >
+              <VStack spacing={4}>
+                <Heading as="h2" size="md">
+                  Translated Text:
+                </Heading>
+                <TextareaAutosize
+                  minRows={3}
+                  maxRows={6}
+                  value={translatedText}
+                  readOnly
+                  style={textareaStyles}
+                />
+                <MotionButton
+                  onClick={handleCopyToClipboard}
+                  colorScheme="purple"
+                  w="full"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Copy to Clipboard
+                </MotionButton>
+              </VStack>
+            </MotionBox>
           )}
-        </button>
-        <div>
-          <label className="block font-semibold mb-2 text-purple-300">Translated Text:</label>
-          <textarea
-            value={translatedText}
-            readOnly
-            className={`w-full p-4 rounded bg-gray-700 text-white resize-none h-32 placeholder-gray-300 ${theme === "dark" ? "border-gray-500" : "border-gray-300"}`}
-          />
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(translatedText).then(() => {
-                alert("Copied to clipboard!");
-              }).catch((err) => {
-                console.error("Failed to copy text: ", err);
-              });
-            }}
-            className={`mt-3 w-full py-2 rounded font-semibold transition transform hover:scale-105 ${theme === "dark" ? "bg-purple-600 hover:bg-purple-500" : "bg-purple-700 hover:bg-purple-600"} text-white`}
-          >
-            Copy to Clipboard
-          </button>
-        </div>
-        <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 space-x-5 justify-between">
-          <button
+        </AnimatePresence>
+
+        <HStack spacing={4}>
+          <MotionButton
             onClick={handleTextToSpeech}
-            className={`w-full md:w-1/2 py-2 rounded font-semibold transition transform hover:scale-105 ${theme === "dark" ? "bg-purple-600 hover:bg-purple-500" : "bg-purple-700 hover:bg-purple-600"} text-white`}
+            leftIcon={<HiSpeakerWave />}
+            colorScheme="purple"
+            w="full"
+            isDisabled={!translatedText}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             Play Translated Text
-          </button>
-          <button
-            aria-label="Toggle listening"
+          </MotionButton>
+          <MotionButton
             onClick={handleSpeechToText}
-            className={`w-full md:w-1/2 py-2 rounded font-semibold transition transform hover:scale-105 ${theme === "dark" ? "bg-purple-600 hover:bg-purple-500" : "bg-purple-700 hover:bg-purple-600"} text-white flex items-center justify-center`}
+            leftIcon={listening ? <FaStopCircle /> : <HiSpeakerWave />}
+            colorScheme={listening ? "red" : "purple"}
+            w="full"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            {listening ? (
-              <>
-                <FaStopCircle className="mr-2" />
-                Stop Listening
-              </>
-            ) : (
-              <>
-                <HiSpeakerWave className="mr-2" />
-                Start Listening
-              </>
-            )}
-          </button>
-        </div>
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4 text-purple-300">Translation History</h2>
-          <ul className="space-y-3">
+            {listening ? "Stop Listening" : "Start Listening"}
+          </MotionButton>
+        </HStack>
+
+        <MotionBox variants={itemVariants}>
+          <Heading as="h2" size="lg" mb={4}>
+            Translation History
+          </Heading>
+          <MotionList spacing={3} variants={containerVariants} initial="hidden" animate="visible">
             {history.map((entry, index) => (
-              <li key={index} className="p-3 bg-gray-700 rounded-lg">
-                <p><span className="font-semibold">Original:</span> {entry.originalText}</p>
-                <p><span className="font-semibold">Translation:</span> {entry.translatedText}</p>
-              </li>
+              <MotionListItem
+                key={index}
+                p={4}
+                borderWidth="1px"
+                borderRadius="lg"
+                variants={itemVariants}
+              >
+                <Text fontWeight="bold">Original: {entry.originalText}</Text>
+                <Text>Translation: {entry.translatedText}</Text>
+              </MotionListItem>
             ))}
-          </ul>
-        </div>
-      </div>
-    </div>
+          </MotionList>
+        </MotionBox>
+      </VStack>
+    </Container>
   );
 };
 
